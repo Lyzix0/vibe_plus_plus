@@ -4,6 +4,8 @@ from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message
 from dotenv import load_dotenv
 import logging
+from src.database import add_user
+from aiogram.filters import Command
 
 
 load_dotenv()
@@ -14,9 +16,9 @@ dp = Dispatcher()
 bot = Bot(token=bot_token)
 
 
-@dp.message()
-async def summary_message(message: Message) -> None:
-    await message.reply('42')
+@dp.message(Command('start'))
+async def start(message: Message) -> None:
+    await message.reply("ПРИВЕТ!")
 
 
 async def main() -> None:

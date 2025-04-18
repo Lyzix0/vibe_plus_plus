@@ -24,19 +24,15 @@ def get_tasks_by_course(course_number, direction):
         data = tasks[1]["common"]
         response = {
             "course": course_number,
-            "message": "Общие задания для первого курса",
+            "message": "Задания для первого курса",
             "tasks": data
         }
     else:
-        # Проверяем существование направления
-        if direction not in tasks[course_number]:
-            return jsonify({"error": "Direction not found for this course"}), 404
-
         data = tasks[course_number][direction]
         response = {
             "course": course_number,
             "direction": direction,
-            "message": f"Специализированные задания для {direction}",
+            "message": f"Задания для {direction}",
             "tasks": data
         }
 
