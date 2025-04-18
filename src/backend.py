@@ -15,14 +15,32 @@ def get_users():
     return jsonify(users)
 
 
-@app.route('/tasks/<direction>', methods=['GET'])
-def get_tasks_by_direction(direction):
-    if direction.upper() in tasks:
-        return jsonify({
+@app.route('/course_<int:course_number>/<string:direction>', methods=['GET'])
+def get_tasks_by_course(course_number, direction):
+    global tasks
+
+    # Для 1 курса - общие задания
+    if course_number == 1:
+        data = tasks[1]["common"]
+        response = {
+            "course": course_number,
+            "message": "Общие задания для первого курса",
+            "tasks": data
+        }
+    else:
+        # Проверяем существование направления
+        if direction not in tasks[course_number]:
+            return jsonify({"error": "Direction not found for this course"}), 404
+
+        data = tasks[course_number][direction]
+        response = {
+            "course": course_number,
             "direction": direction,
-            "tasks": tasks[direction]
-        })
-    return jsonify({"error": "Direction not found"}), 404
+            "message": f"Специализированные задания для {direction}",
+            "tasks": data
+        }
+
+    return jsonify(response)
 
 
 @app.route('/users/<string:name>', methods=['GET'])
