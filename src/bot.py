@@ -13,6 +13,7 @@ load_dotenv()
 bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
 logging.basicConfig(level=logging.INFO)
 
+HTTP_SERVER = "http://127.0.0.1:5000"
 dp = Dispatcher()
 bot = Bot(token=bot_token)
 
@@ -37,7 +38,7 @@ async def start(message: Message, state: FSMContext) -> None:
 
 @router.message(RegistrationStates.almost_reg, F.text)
 async def handle_register(message: Message, state: FSMContext) -> None:
-    data = requests.get('http://127.0.0.1:5000/users').json()
+    data = requests.get(f'{HTTP_SERVER}/users').json()
     ans = False
     for x in data:
         if message.text.lower() == x['name'].lower():
@@ -53,11 +54,13 @@ async def handle_register(message: Message, state: FSMContext) -> None:
     await message.reply("НЕТ ТЫ ВВЕЛ НЕ ТО ИМЯ ПРОБУЙ ЕЩЕ РАЗ")
 
 
-@router.message(RegistrationStates.reg, F.text)
+@router.message(F.text)
 async def send_data(message: Message, state: FSMContext) -> None:
-    user_name = src.database.user_data(message.from_user.id)[1]
-    data = requests.get(f'http://127.0.0.1:5000/users/{user_name}').json()
-    print(data.scores)
+    if await state.get_state() == RegistrationStates.reg:
+        user_name = src.database.user_data(message.from_user.id)[1]
+        data = requests.get(f'{HTTP_SERVER}/users/{user_name}').json()
+        await message.reply(f'{data['name']} - здравствуйте! Загружаю вашу информацию... Осталось около 10 часов')
+
 
 dp.include_router(router)
 
