@@ -8,7 +8,9 @@ from aiogram.types import Message
 from dotenv import load_dotenv
 import logging
 import src.database
+import src.gpt
 from aiogram.filters import Command
+
 
 load_dotenv()
 bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -62,6 +64,12 @@ async def send_data(message: Message, state: FSMContext) -> None:
         user_name = src.database.user_data(message.from_user.id)[1]
         data = requests.get(f'{HTTP_SERVER}/users/{user_name}').json()
         await message.reply(f'{data['name']} - здравствуйте! Загружаю вашу информацию... Осталось около 10 часов')
+
+
+def load_info(name: str):
+    gen = src.gpt.Generator()
+    data = requests.get(f'{HTTP_SERVER}/users/{name}').json()
+    print(data)
 
 
 dp.include_router(router)

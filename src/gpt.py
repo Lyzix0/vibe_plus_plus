@@ -10,7 +10,9 @@ from yandex_cloud_ml_sdk import AsyncYCloudML
 
 class Generator:
     def __init__(self):
-        self.sys_prompt = 'Напиши саммари по тексту'
+        self.sys_prompt = ('Напиши конкретно сколько времени потратит очень медленный студент на выполнение этого '
+                           'задания. НЕ НАДО РАСПИСЫВАТЬ. Только время и единица измерения,'
+                           'не более')
         self.sdk = AsyncYCloudML(
             folder_id=os.getenv("YANDEX_FOLDER_ID"),
             auth=os.getenv("YANDEX_API_KEY"))
@@ -21,9 +23,9 @@ class Generator:
         return model
 
     async def load_sdk_text(self):
-        model = await self.sdk.models.completions('yandexgpt-lite')
+        model = self.sdk.models.completions('yandexgpt-lite')
         model.configure(
-            temperature=0.01,
+            temperature=0.0001,
             max_tokens=2000,
         )
         return model
@@ -46,7 +48,7 @@ class Generator:
         ]
 
         operation = await model.run_deferred(messages)
-        result = operation.wait()
+        result = await operation.wait()
         return result.text
 
     async def gen_image(self, prompt):
@@ -75,9 +77,15 @@ async def main():
     load_dotenv()
 
     gen = Generator()
-    model = await gen.load_sdk_image()
-    image = await gen.gen_image("я крутой")
-    image.show()  # или сохраните изображение
+    await gen.load_sdk_text()
+    xd = ['hello world на python', 'скачать обновление для доты', 'сделать 1000 приседаний', 'посмотреть двухчасовую '
+                                                                                             'лекцию']
+    texts = []
+    for x in xd:
+        text = await gen.gen_summary(x)
+        texts.append(text)
+
+    print(texts)
 
 if __name__ == '__main__':
     asyncio.run(main())
