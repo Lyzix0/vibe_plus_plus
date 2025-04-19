@@ -11,8 +11,11 @@ from yandex_cloud_ml_sdk import AsyncYCloudML
 class Generator:
     def __init__(self):
         self.sys_prompt = ('Напиши конкретно сколько времени потратит очень медленный студент на выполнение этого '
-                           'задания. НЕ НАДО РАСПИСЫВАТЬ. Только время и единица измерения,'
-                           'не более')
+                           'задания в зависимости от его оценок на курсе.'
+                           'Если 2 или 3 - увеличивай время в 2 раза, если оно по той тематике. Если 5 - уменьшай. НЕ '
+                           'НАДО РАСПИСЫВАТЬ. Только'
+                           'время и единица измерения,'
+                           'не более. Сначала я покажу оценки студента, а потом задание')
         self.sdk = AsyncYCloudML(
             folder_id=os.getenv("YANDEX_FOLDER_ID"),
             auth=os.getenv("YANDEX_API_KEY"))
@@ -25,7 +28,7 @@ class Generator:
     async def load_sdk_text(self):
         model = self.sdk.models.completions('yandexgpt-lite')
         model.configure(
-            temperature=0.0001,
+            temperature=0.001,
             max_tokens=2000,
         )
         return model
