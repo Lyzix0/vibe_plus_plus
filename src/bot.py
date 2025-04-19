@@ -1,5 +1,6 @@
 import os
 import requests
+import asyncio
 from aiogram import Bot, Dispatcher, F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
@@ -38,20 +39,21 @@ async def start(message: Message, state: FSMContext) -> None:
 
 @router.message(RegistrationStates.almost_reg, F.text)
 async def handle_register(message: Message, state: FSMContext) -> None:
-    data = requests.get(f'{HTTP_SERVER}/users').json()
-    ans = False
-    for x in data:
-        if message.text.lower() == x['name'].lower():
-            ans = True
-            break
+    try:
+        data = requests.get(f'{HTTP_SERVER}/users').json()
+        ans = False
+        for x in data:
+            if message.text.lower() == x['name'].lower():
+                ans = True
+                break
 
-    if ans:
-        await message.reply("ТЫ МОЛОДЕЦ ПОЛЬЗУЙСЯ БОТОМ")
-        src.database.add_user(message.from_user.id, message.text.lower())
-        await state.set_state(RegistrationStates.reg)
-        return
-
-    await message.reply("НЕТ ТЫ ВВЕЛ НЕ ТО ИМЯ ПРОБУЙ ЕЩЕ РАЗ")
+        if ans:
+            await message.reply("ТЫ МОЛОДЕЦ ПОЛЬЗУЙСЯ БОТОМ")
+            src.database.add_user(message.from_user.id, message.text.lower())
+            await state.set_state(RegistrationStates.reg)
+            return
+    except Exception:
+        await message.reply("НЕТ ТЫ ВВЕЛ НЕ ТО ИМЯ ПРОБУЙ ЕЩЕ РАЗ")
 
 
 @router.message(F.text)
@@ -67,3 +69,7 @@ dp.include_router(router)
 
 async def main() -> None:
     await dp.start_polling(bot)
+
+
+if __name__ == '__main__':
+    asyncio.run(main())
