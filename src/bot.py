@@ -63,14 +63,26 @@ async def send_data(message: Message, state: FSMContext) -> None:
     if await state.get_state() == RegistrationStates.reg:
         user_name = src.database.user_data(message.from_user.id)[1]
         data = requests.get(f'{HTTP_SERVER}/users/{user_name}').json()
+        marks = data['scores']['marks']
+
         await message.reply(f'{data['name']} - здравствуйте! Загружаю вашу информацию... Осталось около 10 часов')
+        message_text = await load_info(marks, data['scores']['course'], data['scores']['direction'])
+        await message.reply(message_text, parse_mode='MARKDOWN')
 
 
-def load_info(name: str):
+async def load_info(marks, course, direction):
     gen = src.gpt.Generator()
-    data = requests.get(f'{HTTP_SERVER}/users/{name}').json()
-    print(data)
+    await gen.load_sdk_text()
+    data = requests.get(f'{HTTP_SERVER}/course_{course}/{direction}').json()
 
+    tasks = [gen.gen_summary(x['description']) for x in data['tasks']]
+    texts = await asyncio.gather(*tasks, return_exceptions=True)
+
+    message = ''
+    for a, text in zip(data['tasks'], texts):
+        message += f'*{a['title']}*: \n{text}\n\n'
+
+    return message
 
 dp.include_router(router)
 

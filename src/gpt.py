@@ -61,17 +61,6 @@ class Generator:
         image = Image.open(BytesIO(result.image_bytes))
         return image
 
-    def gen_class(self, text):
-        model = self.load_classify()
-        result = model.run(text)
-
-        best_prediction = result.predictions[0]
-        for prediction in result.predictions:
-            if prediction.confidence > best_prediction.confidence:
-                best_prediction = prediction
-
-        return best_prediction.label
-
 
 async def main():
     load_dotenv()
