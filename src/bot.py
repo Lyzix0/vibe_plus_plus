@@ -25,7 +25,12 @@ router = Router()
 
 def get_main_keyboard():
     builder = ReplyKeyboardBuilder()
-    builder.add(KeyboardButton(text="Узнать время на задания"))
+    builder.add(
+        KeyboardButton(text="Узнать время на задания"),
+        KeyboardButton(text="Показать оценки"),
+        KeyboardButton(text="О боте")
+    )
+    builder.adjust(1)  # Располагаем кнопки в один столбец
     return builder.as_markup(resize_keyboard=True)
 
 
@@ -58,7 +63,6 @@ async def handle_register(message: Message, state: FSMContext) -> None:
     if ans:
         await message.reply("Успешная регистрация! Можете пользоваться ботом",
                             reply_markup=get_main_keyboard())
-
         src.database.add_user(message.from_user.id, message.text.lower())
         await state.set_state(RegistrationStates.reg)
         return
@@ -66,23 +70,60 @@ async def handle_register(message: Message, state: FSMContext) -> None:
     await message.reply("Неправильно имя! Попробуйте еще раз")
 
 
-@router.message(F.text)
-async def send_data(message: Message, state: FSMContext) -> None:
+@router.message(F.text == "О боте")
+async def about(message: Message):
+    text = ('Я бот, который анализирует данные с сервера, использует технологии искусственного интеллекта для '
+            'определения времени выполнения заданий, которые есть на сервере (lms ВУЗА), на основе текущих оценок '
+            'студента. Идея бота - пользователю нужно только написать боту, и он уже получает готовый ответ без '
+            'заморочек')
+
+    await message.reply(text)
+
+
+@router.message(F.text == "Показать оценки")
+async def show_marks(message: Message, state: FSMContext):
     if await state.get_state() == RegistrationStates.reg or src.database.user_data(message.from_user.id):
         user_name = src.database.user_data(message.from_user.id)[1]
         data = requests.get(f'{HTTP_SERVER}/users/{user_name}').json()
         marks = data['scores']['marks']
 
-        await message.reply(f'{data['name']} - здравствуйте! Загружаю вашу информацию... Это займет немного времени...')
+        await message.reply(
+            format_marks(marks),
+            parse_mode='Markdown',
+            reply_markup=get_main_keyboard()
+        )
+
+
+@router.message(F.text == "Узнать время на задания")
+async def handle_task_time(message: Message, state: FSMContext):
+    if await state.get_state() == RegistrationStates.reg or src.database.user_data(message.from_user.id):
+        user_name = src.database.user_data(message.from_user.id)[1]
+        data = requests.get(f'{HTTP_SERVER}/users/{user_name}').json()
+        marks = data['scores']['marks']
+
+        await message.reply(f'{data["name"]} - загружаю вашу информацию...')
         message_text, image = await asyncio.gather(
             load_info(marks, data['scores']['course'], data['scores']['direction']),
             gen_homa()
         )
         image.save('name.png')
 
-        await bot.send_photo(message.from_user.id, parse_mode='Markdown', photo=FSInputFile('name.png'),
-                             caption=message_text,
-                             reply_markup=get_main_keyboard())
+        await bot.send_photo(
+            message.from_user.id,
+            parse_mode='Markdown',
+            photo=FSInputFile('name.png'),
+            caption=message_text,
+            reply_markup=get_main_keyboard()
+        )
+
+
+@router.message(F.text)
+async def other_messages(message: Message, state: FSMContext):
+    if await state.get_state() == RegistrationStates.reg:
+        await message.reply(
+            "Используйте кнопки меню для работы с ботом",
+            reply_markup=get_main_keyboard()
+        )
     else:
         await start(message, state)
 
@@ -95,9 +136,9 @@ async def load_info(marks, course, direction):
     tasks = [gen.gen_summary(f'{marks}   {x["description"]}') for x in data['tasks']]
     texts = await asyncio.gather(*tasks, return_exceptions=True)
 
-    message = format_marks(marks) + '\n\n'
+    message = ''
     for a, text in zip(data['tasks'], texts):
-        message += f'*{a['title']}*: \n{a['description']} \n\n{text}\n\n'
+        message += f'*{a["title"]}*: \n{a["description"]} \n\n{text}\n\n'
 
     return message
 
