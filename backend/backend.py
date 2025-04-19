@@ -1,6 +1,6 @@
 from flask import Flask, jsonify
 
-from src.server_data import users, tasks, users_score
+from server_data import users, users_score
 
 app = Flask(__name__)
 
