@@ -7,7 +7,7 @@ DB_FILE = 'user_db.db'
 def init_db():
     db_exists = os.path.exists(DB_FILE)
 
-    con = sqlite3.connect(DB_FILE)
+    con = sqlite3.connect(DB_FILE, check_same_thread=False)
     cursor = con.cursor()
 
     if not db_exists:
@@ -24,8 +24,9 @@ def init_db():
         print(f"База данных {DB_FILE} уже существует")
 
 
-init_db()
-connection = sqlite3.connect(DB_FILE)
+if __name__ != "__main__":
+    init_db()
+    connection = sqlite3.connect(DB_FILE)
 
 
 def add_user(user_id: int, name: str):

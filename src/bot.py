@@ -4,13 +4,12 @@ import asyncio
 from aiogram import Bot, Dispatcher, F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
-from aiogram.types import Message
+from aiogram.types import Message, FSInputFile
 from dotenv import load_dotenv
 import logging
 import src.database
 import src.gpt
 from aiogram.filters import Command
-
 
 load_dotenv()
 bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -41,21 +40,20 @@ async def start(message: Message, state: FSMContext) -> None:
 
 @router.message(RegistrationStates.almost_reg, F.text)
 async def handle_register(message: Message, state: FSMContext) -> None:
-    try:
-        data = requests.get(f'{HTTP_SERVER}/users').json()
-        ans = False
-        for x in data:
-            if message.text.lower() == x['name'].lower():
-                ans = True
-                break
+    data = requests.get(f'{HTTP_SERVER}/users').json()
+    ans = False
+    for x in data:
+        if message.text.lower() == x['name'].lower():
+            ans = True
+            break
 
-        if ans:
-            await message.reply("ТЫ МОЛОДЕЦ ПОЛЬЗУЙСЯ БОТОМ")
-            src.database.add_user(message.from_user.id, message.text.lower())
-            await state.set_state(RegistrationStates.reg)
-            return
-    except Exception:
-        await message.reply("НЕТ ТЫ ВВЕЛ НЕ ТО ИМЯ ПРОБУЙ ЕЩЕ РАЗ")
+    if ans:
+        await message.reply("ТЫ МОЛОДЕЦ ПОЛЬЗУЙСЯ БОТОМ")
+        src.database.add_user(message.from_user.id, message.text.lower())
+        await state.set_state(RegistrationStates.reg)
+        return
+
+    await message.reply("НЕТ ТЫ ВВЕЛ НЕ ТО ИМЯ ПРОБУЙ ЕЩЕ РАЗ")
 
 
 @router.message(F.text)
@@ -66,8 +64,14 @@ async def send_data(message: Message, state: FSMContext) -> None:
         marks = data['scores']['marks']
 
         await message.reply(f'{data['name']} - здравствуйте! Загружаю вашу информацию... Осталось около 10 часов')
-        message_text = await load_info(marks, data['scores']['course'], data['scores']['direction'])
-        await message.reply(message_text, parse_mode='MARKDOWN')
+        message_text, image = await asyncio.gather(
+            load_info(marks, data['scores']['course'], data['scores']['direction']),
+            gen_homa()
+        )
+        image.save('name.png')
+
+        await bot.send_photo(message.from_user.id, parse_mode='Markdown', photo=FSInputFile('name.png'),
+                             caption=message_text)
 
 
 async def load_info(marks, course, direction):
@@ -83,6 +87,14 @@ async def load_info(marks, course, direction):
         message += f'*{a['title']}*: \n{text}\n\n'
 
     return message
+
+
+async def gen_homa():
+    gen = src.gpt.Generator()
+    await gen.load_sdk_image()
+    image = await gen.gen_image("Веселый хомячок хома в стиле комикс")
+    return image
+
 
 dp.include_router(router)
 
